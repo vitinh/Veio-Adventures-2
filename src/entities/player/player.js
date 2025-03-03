@@ -23,8 +23,14 @@ class Player extends Entity {
     this.movementTime = 0;        // Time spent moving in current direction
     this.stepCycle = 0;           // For footstep timing
     
-    // Collision handling
-    this.collisionBuffer = 0.05;  // Smaller collision buffer for more precise movement
+    // Collision handling - smaller collision buffer for more precise movement
+    this.collisionBuffer = 0.05;
+    
+    // Add collision box properties - make hitbox smaller than visible sprite
+    this.collisionBoxWidth = this.width - 8;  // 24px wide collision box (4px smaller on each side)
+    this.collisionBoxHeight = this.height - 8; // 24px tall collision box (4px smaller on each side)
+    this.collisionBoxOffsetX = 4;  // Center the collision box
+    this.collisionBoxOffsetY = 4;  // Center the collision box
   }
 
   handleInput(input, deltaTime) {
@@ -126,8 +132,153 @@ class Player extends Entity {
     // Additional player-specific update logic can go here
   }
 
+  handleTileCollisionX(map, originalX, originalY) {
+    const tileSize = map.tileSize;
+    
+    // Calculate entity bounds with smaller collision box
+    const left = this.x + this.collisionBoxOffsetX;
+    const right = this.x + this.collisionBoxOffsetX + this.collisionBoxWidth;
+    const top = this.y + this.collisionBoxOffsetY;
+    const bottom = this.y + this.collisionBoxOffsetY + this.collisionBoxHeight;
+    
+    // Convert to tile coordinates, being careful with edge cases
+    const startTileX = Math.floor(left / tileSize);
+    const endTileX = Math.floor((right - 0.001) / tileSize);
+    const startTileY = Math.floor(top / tileSize);
+    const endTileY = Math.floor((bottom - 0.001) / tileSize);
+    
+    // Ensure we don't check outside the map
+    const minTileX = Math.max(0, startTileX);
+    const maxTileX = Math.min(map.columns - 1, endTileX);
+    const minTileY = Math.max(0, startTileY);
+    const maxTileY = Math.min(map.rows - 1, endTileY);
+    
+    // Flag to track if a collision occurred
+    let collisionOccurred = false;
+    
+    // Check for collisions in the X direction
+    if (this.velocityX > 0) { // Moving right
+      // Check the right edge
+      const rightTileX = Math.floor(right / tileSize);
+      
+      // If we're entering a new tile
+      if (rightTileX > Math.floor((originalX + this.collisionBoxOffsetX + this.collisionBoxWidth - 0.001) / tileSize)) {
+        for (let y = minTileY; y <= maxTileY; y++) {
+          const tile = map.getTile(rightTileX, y);
+          if (tile && !tile.isWalkable()) {
+            // Collision with right edge of entity
+            this.x = rightTileX * tileSize - this.collisionBoxWidth - this.collisionBoxOffsetX - this.collisionBuffer;
+            collisionOccurred = true;
+            break;
+          }
+        }
+      }
+    } else if (this.velocityX < 0) { // Moving left
+      // Check the left edge
+      const leftTileX = Math.floor(left / tileSize);
+      
+      // If we're entering a new tile
+      if (leftTileX < Math.floor((originalX + this.collisionBoxOffsetX) / tileSize)) {
+        for (let y = minTileY; y <= maxTileY; y++) {
+          const tile = map.getTile(leftTileX, y);
+          if (tile && !tile.isWalkable()) {
+            // Collision with left edge of entity
+            this.x = (leftTileX + 1) * tileSize - this.collisionBoxOffsetX + this.collisionBuffer;
+            collisionOccurred = true;
+            break;
+          }
+        }
+      }
+    }
+    
+    return collisionOccurred;
+  }
+  
+  handleTileCollisionY(map, originalX, originalY) {
+    const tileSize = map.tileSize;
+    
+    // Calculate entity bounds with smaller collision box
+    const left = this.x + this.collisionBoxOffsetX;
+    const right = this.x + this.collisionBoxOffsetX + this.collisionBoxWidth;
+    const top = this.y + this.collisionBoxOffsetY;
+    const bottom = this.y + this.collisionBoxOffsetY + this.collisionBoxHeight;
+    
+    // Convert to tile coordinates, being careful with edge cases
+    const startTileX = Math.floor(left / tileSize);
+    const endTileX = Math.floor((right - 0.001) / tileSize);
+    const startTileY = Math.floor(top / tileSize);
+    const endTileY = Math.floor((bottom - 0.001) / tileSize);
+    
+    // Ensure we don't check outside the map
+    const minTileX = Math.max(0, startTileX);
+    const maxTileX = Math.min(map.columns - 1, endTileX);
+    const minTileY = Math.max(0, startTileY);
+    const maxTileY = Math.min(map.rows - 1, endTileY);
+    
+    // Flag to track if a collision occurred
+    let collisionOccurred = false;
+    
+    // Check for collisions in the Y direction
+    if (this.velocityY > 0) { // Moving down
+      // Check the bottom edge
+      const bottomTileY = Math.floor(bottom / tileSize);
+      
+      // If we're entering a new tile
+      if (bottomTileY > Math.floor((originalY + this.collisionBoxOffsetY + this.collisionBoxHeight - 0.001) / tileSize)) {
+        for (let x = minTileX; x <= maxTileX; x++) {
+          const tile = map.getTile(x, bottomTileY);
+          if (tile && !tile.isWalkable()) {
+            // Collision with bottom edge of entity
+            this.y = bottomTileY * tileSize - this.collisionBoxHeight - this.collisionBoxOffsetY - this.collisionBuffer;
+            collisionOccurred = true;
+            break;
+          }
+        }
+      }
+    } else if (this.velocityY < 0) { // Moving up
+      // Check the top edge
+      const topTileY = Math.floor(top / tileSize);
+      
+      // If we're entering a new tile
+      if (topTileY < Math.floor((originalY + this.collisionBoxOffsetY) / tileSize)) {
+        for (let x = minTileX; x <= maxTileX; x++) {
+          const tile = map.getTile(x, topTileY);
+          if (tile && !tile.isWalkable()) {
+            // Collision with top edge of entity
+            this.y = (topTileY + 1) * tileSize - this.collisionBoxOffsetY + this.collisionBuffer;
+            collisionOccurred = true;
+            break;
+          }
+        }
+      }
+    }
+    
+    return collisionOccurred;
+  }
+
+  collidesWith(entity) {
+    // Use the smaller collision box for player
+    const playerLeft = this.x + this.collisionBoxOffsetX;
+    const playerRight = playerLeft + this.collisionBoxWidth;
+    const playerTop = this.y + this.collisionBoxOffsetY;
+    const playerBottom = playerTop + this.collisionBoxHeight;
+    
+    // Use regular bounds for the other entity
+    const entityLeft = entity.x;
+    const entityRight = entity.x + entity.width;
+    const entityTop = entity.y;
+    const entityBottom = entity.y + entity.height;
+    
+    return (
+      playerLeft < entityRight &&
+      playerRight > entityLeft &&
+      playerTop < entityBottom &&
+      playerBottom > entityTop
+    );
+  }
+
   render(renderer) {
-    // Render the player sprite
+    // Call parent render method for the sprite
     super.render(renderer);
     
     // Render health bar above player
@@ -154,6 +305,18 @@ class Player extends Entity {
       healthPercent > 0.5 ? 'green' : healthPercent > 0.25 ? 'yellow' : 'red', 
       `health-fg-${this.id}`
     );
+    
+    // Debug: Render collision box (uncomment for debugging)
+    /*
+    renderer.renderRect(
+      this.x + this.collisionBoxOffsetX,
+      this.y + this.collisionBoxOffsetY,
+      this.collisionBoxWidth,
+      this.collisionBoxHeight,
+      'rgba(255, 0, 0, 0.3)',
+      `collision-box-${this.id}`
+    );
+    */
   }
   
   takeDamage(amount) {
