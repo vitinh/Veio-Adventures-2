@@ -22,6 +22,9 @@ class Player extends Entity {
     // Animation state tracking
     this.movementTime = 0;        // Time spent moving in current direction
     this.stepCycle = 0;           // For footstep timing
+    
+    // Collision handling
+    this.collisionBuffer = 0.05;  // Smaller collision buffer for more precise movement
   }
 
   handleInput(input, deltaTime) {
@@ -50,7 +53,7 @@ class Player extends Entity {
     this.updateAnimationState(deltaTime);
     
     // Handle footstep sounds
-    this.handleFootsteps(deltaTime);
+    return this.handleFootsteps(deltaTime);
   }
   
   smoothVelocity(deltaTime) {

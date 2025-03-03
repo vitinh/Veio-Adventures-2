@@ -25,6 +25,9 @@ class Game {
     this.frameTime = 0;
     this.fps = 0;
     this.accumulatedTime = 0;
+    
+    // Maximum time to simulate in one frame to prevent spiral of death
+    this.maxFrameTime = 0.1; // 100ms
   }
 
   init() {
@@ -90,9 +93,8 @@ class Game {
     let deltaTime = (timestamp - this.lastTimestamp) / 1000;
     
     // Cap maximum delta time to prevent "spiral of death" with slow frames
-    const maxDeltaTime = 0.1; // 100ms maximum delta
-    if (deltaTime > maxDeltaTime) {
-      deltaTime = maxDeltaTime;
+    if (deltaTime > this.maxFrameTime) {
+      deltaTime = this.maxFrameTime;
     }
     
     this.lastTimestamp = timestamp;
@@ -114,6 +116,11 @@ class Game {
     while (this.accumulatedTime >= fixedTimeStep) {
       this.update(fixedTimeStep);
       this.accumulatedTime -= fixedTimeStep;
+      
+      // Prevent spiral of death by limiting accumulated time
+      if (this.accumulatedTime > this.maxFrameTime) {
+        this.accumulatedTime = this.maxFrameTime;
+      }
     }
 
     // Render the game
@@ -137,17 +144,19 @@ class Game {
       }
     }
 
-    // Update all entities
-    for (const entity of this.entities) {
-      entity.update(deltaTime, this.map);
-    }
-
-    // Update map
+    // Update map first (might have moving tiles)
     if (this.map) {
       this.map.update(deltaTime);
     }
     
-    // Check collisions
+    // Update all entities
+    for (const entity of this.entities) {
+      if (entity.active) {
+        entity.update(deltaTime, this.map);
+      }
+    }
+    
+    // Check entity-to-entity collisions
     this.checkCollisions();
   }
   
@@ -156,8 +165,12 @@ class Game {
     for (let i = 0; i < this.entities.length; i++) {
       const entityA = this.entities[i];
       
+      if (!entityA.active) continue;
+      
       for (let j = i + 1; j < this.entities.length; j++) {
         const entityB = this.entities[j];
+        
+        if (!entityB.active) continue;
         
         if (entityA.collidesWith(entityB)) {
           entityA.onCollision(entityB);
@@ -178,11 +191,22 @@ class Game {
 
     // Render all entities
     for (const entity of this.entities) {
-      entity.render(this.renderer);
+      if (entity.active && entity.visible) {
+        entity.render(this.renderer);
+      }
     }
     
     // Render FPS counter
     this.renderer.renderText(10, 20, `FPS: ${this.fps}`, '#FFF');
+    
+    // Render debug info if needed
+    if (this.player) {
+      this.renderer.renderText(10, 40, 
+        `Pos: (${Math.floor(this.player.x)}, ${Math.floor(this.player.y)})`, 
+        '#FFF', 
+        'debug-pos'
+      );
+    }
   }
 }
 
