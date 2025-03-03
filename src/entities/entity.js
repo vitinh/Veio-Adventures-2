@@ -62,63 +62,115 @@ class Entity {
   }
 
   handleMapCollision(map) {
-    // Basic collision with map boundaries
-    this.x = Math.max(0, Math.min(map.width - this.width, this.x));
-    this.y = Math.max(0, Math.min(map.height - this.height, this.y));
+    // Ensure we're within map boundaries with smoother edge collision
+    const margin = 0.1; // Small margin to prevent overlap
+    
+    // Horizontal boundary checking
+    if (this.x < 0) {
+      this.x = 0 + margin;
+      this.velocityX = 0; // Stop horizontal movement
+    } else if (this.x + this.width > map.width) {
+      this.x = map.width - this.width - margin;
+      this.velocityX = 0; // Stop horizontal movement
+    }
+    
+    // Vertical boundary checking
+    if (this.y < 0) {
+      this.y = 0 + margin;
+      this.velocityY = 0; // Stop vertical movement
+    } else if (this.y + this.height > map.height) {
+      this.y = map.height - this.height - margin;
+      this.velocityY = 0; // Stop vertical movement
+    }
     
     // Check collision with tiles
     this.handleTileCollision(map);
   }
   
   handleTileCollision(map) {
-    // Check the four corners of the entity against map tiles
-    const corners = [
-      { x: this.x, y: this.y },                           // Top-left
-      { x: this.x + this.width, y: this.y },              // Top-right
-      { x: this.x, y: this.y + this.height },             // Bottom-left
-      { x: this.x + this.width, y: this.y + this.height } // Bottom-right
-    ];
+    // Implementation of Swept AABB collision for smoother tile collision
+    // Store original position for collision resolution
+    const originalX = this.x;
+    const originalY = this.y;
     
-    for (const corner of corners) {
-      const tile = map.getTileAt(corner.x, corner.y);
-      
-      if (tile && !tile.isWalkable()) {
-        // Simple collision response - push out of the tile
-        // This is a basic implementation that could be improved
-        
-        // Get tile boundaries
-        const tileX = Math.floor(corner.x / map.tileSize) * map.tileSize;
-        const tileY = Math.floor(corner.y / map.tileSize) * map.tileSize;
-        
-        // Calculate overlap
-        const overlapX1 = (this.x + this.width) - tileX;
-        const overlapX2 = (tileX + map.tileSize) - this.x;
-        const overlapY1 = (this.y + this.height) - tileY;
-        const overlapY2 = (tileY + map.tileSize) - this.y;
-        
-        // Find minimum overlap
-        const overlapX = Math.min(overlapX1, overlapX2);
-        const overlapY = Math.min(overlapY1, overlapY2);
-        
-        // Resolve collision along the axis with smaller overlap
-        if (overlapX < overlapY) {
-          // X-axis collision
-          if (overlapX1 < overlapX2) {
-            this.x = tileX - this.width; // Push left
-          } else {
-            this.x = tileX + map.tileSize; // Push right
+    // Calculate entity bounds
+    const entityLeft = this.x;
+    const entityRight = this.x + this.width;
+    const entityTop = this.y;
+    const entityBottom = this.y + this.height;
+    
+    // Determine which tiles to check based on entity position and size
+    const startTileX = Math.floor(entityLeft / map.tileSize);
+    const endTileX = Math.floor((entityRight - 0.1) / map.tileSize);
+    const startTileY = Math.floor(entityTop / map.tileSize);
+    const endTileY = Math.floor((entityBottom - 0.1) / map.tileSize);
+    
+    // Check for collisions with tiles
+    let collisionX = false;
+    let collisionY = false;
+    
+    // Separate horizontal and vertical collision checks for better control
+    
+    // Check horizontal collision first
+    for (let y = startTileY; y <= endTileY; y++) {
+      // Check tiles in moving direction first for better response
+      if (this.velocityX > 0) { // Moving right
+        for (let x = endTileX; x >= startTileX; x--) {
+          const tile = map.getTile(x, y);
+          if (tile && !tile.isWalkable()) {
+            // Collision with right edge of entity
+            this.x = x * map.tileSize - this.width;
+            this.velocityX = 0;
+            collisionX = true;
+            break;
           }
-          this.velocityX = 0;
-        } else {
-          // Y-axis collision
-          if (overlapY1 < overlapY2) {
-            this.y = tileY - this.height; // Push up
-          } else {
-            this.y = tileY + map.tileSize; // Push down
+        }
+      } else if (this.velocityX < 0) { // Moving left
+        for (let x = startTileX; x <= endTileX; x++) {
+          const tile = map.getTile(x, y);
+          if (tile && !tile.isWalkable()) {
+            // Collision with left edge of entity
+            this.x = (x + 1) * map.tileSize;
+            this.velocityX = 0;
+            collisionX = true;
+            break;
           }
-          this.velocityY = 0;
         }
       }
+      
+      if (collisionX) break;
+    }
+    
+    // After resolving X collision, check Y collision with the new X position
+    const newStartTileX = Math.floor(this.x / map.tileSize);
+    const newEndTileX = Math.floor((this.x + this.width - 0.1) / map.tileSize);
+    
+    for (let x = newStartTileX; x <= newEndTileX; x++) {
+      if (this.velocityY > 0) { // Moving down
+        for (let y = endTileY; y >= startTileY; y--) {
+          const tile = map.getTile(x, y);
+          if (tile && !tile.isWalkable()) {
+            // Collision with bottom edge of entity
+            this.y = y * map.tileSize - this.height;
+            this.velocityY = 0;
+            collisionY = true;
+            break;
+          }
+        }
+      } else if (this.velocityY < 0) { // Moving up
+        for (let y = startTileY; y <= endTileY; y++) {
+          const tile = map.getTile(x, y);
+          if (tile && !tile.isWalkable()) {
+            // Collision with top edge of entity
+            this.y = (y + 1) * map.tileSize;
+            this.velocityY = 0;
+            collisionY = true;
+            break;
+          }
+        }
+      }
+      
+      if (collisionY) break;
     }
   }
 

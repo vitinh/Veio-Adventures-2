@@ -1,7 +1,7 @@
 import Entity from '../entity.js';
 
 /**
- * Player entity controlled by the user
+ * Player entity controlled by the user with improved movement
  */
 class Player extends Entity {
   constructor(x, y) {
@@ -12,54 +12,115 @@ class Player extends Entity {
     this.maxHealth = 100;
     this.lastStepTime = 0;
     this.stepSoundInterval = 0.3; // Seconds between step sounds
+    
+    // Movement smoothing
+    this.targetVelocityX = 0;
+    this.targetVelocityY = 0;
+    this.accelerationRate = 15;   // How quickly to reach target velocity
+    this.decelerationRate = 20;   // How quickly to slow down
+    
+    // Animation state tracking
+    this.movementTime = 0;        // Time spent moving in current direction
+    this.stepCycle = 0;           // For footstep timing
   }
 
   handleInput(input, deltaTime) {
-    // Reset velocity
-    this.velocityX = 0;
-    this.velocityY = 0;
+    // Get movement input as -1 to 1 values
+    const horizontalInput = input.horizontalAxis;
+    const verticalInput = input.verticalAxis;
     
-    // Set velocity based on arrow key input
-    if (input.isUp) {
-      this.velocityY = -this.speed;
-      this.direction = 'up';
-    } else if (input.isDown) {
-      this.velocityY = this.speed;
-      this.direction = 'down';
-    }
+    // Set target velocity based on input
+    this.targetVelocityX = horizontalInput * this.speed;
+    this.targetVelocityY = verticalInput * this.speed;
     
-    if (input.isLeft) {
-      this.velocityX = -this.speed;
-      this.direction = 'left';
-    } else if (input.isRight) {
-      this.velocityX = this.speed;
-      this.direction = 'right';
-    }
-    
-    // Normalize diagonal movement
-    if (this.velocityX !== 0 && this.velocityY !== 0) {
+    // Normalize diagonal movement for target velocity
+    if (this.targetVelocityX !== 0 && this.targetVelocityY !== 0) {
       const normalizer = 1 / Math.sqrt(2);
-      this.velocityX *= normalizer;
-      this.velocityY *= normalizer;
+      this.targetVelocityX *= normalizer;
+      this.targetVelocityY *= normalizer;
     }
+    
+    // Smoothly adjust actual velocity toward target velocity
+    this.smoothVelocity(deltaTime);
+    
+    // Update facing direction based on movement
+    this.updateDirection(horizontalInput, verticalInput);
     
     // Update animation state
-    this.animationState = (this.velocityX !== 0 || this.velocityY !== 0) ? 'walk' : 'idle';
+    this.updateAnimationState(deltaTime);
     
-    // Play step sound while moving
-    if (this.animationState === 'walk') {
-      this.lastStepTime += deltaTime;
-      if (this.lastStepTime >= this.stepSoundInterval) {
-        // Play step sound (would be called from Game class)
-        this.lastStepTime = 0;
+    // Handle footstep sounds
+    this.handleFootsteps(deltaTime);
+  }
+  
+  smoothVelocity(deltaTime) {
+    // Calculate the difference between current and target velocity
+    const diffX = this.targetVelocityX - this.velocityX;
+    const diffY = this.targetVelocityY - this.velocityY;
+    
+    // Determine if we're accelerating or decelerating
+    const rate = (this.targetVelocityX === 0 && this.targetVelocityY === 0) ? 
+                 this.decelerationRate : this.accelerationRate;
+    
+    // Apply smooth acceleration/deceleration
+    this.velocityX += diffX * rate * deltaTime;
+    this.velocityY += diffY * rate * deltaTime;
+    
+    // Apply a small deadzone to prevent micro-movements
+    if (Math.abs(this.velocityX) < 1) this.velocityX = 0;
+    if (Math.abs(this.velocityY) < 1) this.velocityY = 0;
+  }
+  
+  updateDirection(horizontalInput, verticalInput) {
+    // Only update direction when there's actual input
+    if (horizontalInput !== 0 || verticalInput !== 0) {
+      // Determine primary direction based on strongest input
+      if (Math.abs(horizontalInput) > Math.abs(verticalInput)) {
+        this.direction = horizontalInput > 0 ? 'right' : 'left';
+      } else {
+        this.direction = verticalInput > 0 ? 'down' : 'up';
       }
     }
+  }
+  
+  updateAnimationState(deltaTime) {
+    // Check if the player is moving
+    const isMoving = Math.abs(this.velocityX) > 5 || Math.abs(this.velocityY) > 5;
+    
+    if (isMoving) {
+      this.animationState = 'walk';
+      this.movementTime += deltaTime;
+    } else {
+      this.animationState = 'idle';
+      this.movementTime = 0;
+    }
+  }
+  
+  handleFootsteps(deltaTime) {
+    // Only play step sounds when actually moving
+    if (this.animationState === 'walk') {
+      this.lastStepTime += deltaTime;
+      this.stepCycle += deltaTime * Math.sqrt(this.velocityX * this.velocityX + 
+                                             this.velocityY * this.velocityY) / this.speed;
+      
+      // Use step cycle to determine when to play sound
+      if (this.stepCycle >= this.stepSoundInterval) {
+        // This would trigger the sound in the game class
+        this.stepCycle = 0;
+        return true; // Signal to play step sound
+      }
+    } else {
+      // Reset step timing when not walking
+      this.lastStepTime = 0;
+      this.stepCycle = 0;
+    }
+    return false;
   }
 
   update(deltaTime, map) {
     super.update(deltaTime, map);
     
-    // Additional player-specific update logic
+    // Additional player-specific update logic can go here
   }
 
   render(renderer) {

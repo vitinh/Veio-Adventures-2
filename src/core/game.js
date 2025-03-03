@@ -85,8 +85,15 @@ class Game {
   gameLoop(timestamp) {
     if (!this.running) return;
 
-    // Calculate delta time in seconds
-    const deltaTime = (timestamp - this.lastTimestamp) / 1000;
+    // Calculate delta time in seconds with a maximum value to prevent large jumps
+    let deltaTime = (timestamp - this.lastTimestamp) / 1000;
+    
+    // Cap maximum delta time to prevent "spiral of death" with slow frames
+    const maxDeltaTime = 0.1; // 100ms maximum delta
+    if (deltaTime > maxDeltaTime) {
+      deltaTime = maxDeltaTime;
+    }
+    
     this.lastTimestamp = timestamp;
     
     // FPS calculation
@@ -98,8 +105,15 @@ class Game {
       this.frameTime = 0;
     }
 
-    // Update game state
-    this.update(deltaTime);
+    // Update game state with fixed time step for consistent physics
+    this.accumulatedTime += deltaTime;
+    const fixedTimeStep = 1 / 60; // 60 updates per second
+    
+    // Process all accumulated time in fixed chunks
+    while (this.accumulatedTime >= fixedTimeStep) {
+      this.update(fixedTimeStep);
+      this.accumulatedTime -= fixedTimeStep;
+    }
 
     // Render the game
     this.render();
@@ -110,11 +124,16 @@ class Game {
 
   update(deltaTime) {
     // Update input state
-    this.input.update();
+    this.input.update(deltaTime);
 
     // Update player with input
     if (this.player) {
-      this.player.handleInput(this.input, deltaTime);
+      const playStepSound = this.player.handleInput(this.input, deltaTime);
+      
+      // Play step sound if the player's movement indicates we should
+      if (playStepSound) {
+        this.audioManager.play('step', { volume: 0.4 });
+      }
     }
 
     // Update all entities
