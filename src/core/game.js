@@ -24,6 +24,7 @@ class Game {
     this.frameCount = 0;
     this.frameTime = 0;
     this.fps = 0;
+    this.accumulatedTime = 0;
   }
 
   init() {
