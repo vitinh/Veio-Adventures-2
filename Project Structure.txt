@@ -1,0 +1,46 @@
+# SVG Game - Project Structure
+
+```
+/game
+  /src
+    /core
+      game.js           - Main game logic and loop
+      renderer.js       - SVG-based renderer
+      input.js          - Keyboard input handling
+      assetLoader.js    - Loading sprites and audio
+      audioManager.js   - Managing game sounds
+    /entities
+      entity.js         - Base entity class
+      /player
+        player.js       - Player implementation
+      /enemies
+        enemy.js        - Base enemy class
+        simpleEnemy.js  - Basic enemy implementation
+    /maps
+      map.js            - Base map class
+      level1.js         - First level implementation
+    /tiles
+      tile.js           - Base tile class
+      grassTile.js      - Grass tile implementation
+      wallTile.js       - Wall tile implementation
+    /utils
+      collision.js      - Collision detection
+      animation.js      - Animation utilities
+    /assets
+      /sprites
+        /player
+          player.svg    - Player sprite
+        /enemies
+          enemy.svg     - Enemy sprite
+        /tiles
+          grass.svg     - Grass tile sprite
+          wall.svg      - Wall tile sprite
+      /audio
+        step.wav        - Footstep sound
+        impact.wav      - Impact sound
+    index.js            - Entry point
+  main.js               - Electron main process
+  index.html            - HTML container
+  package.json          - Project configuration
+  setup.ps1             - Setup script for directories
+```

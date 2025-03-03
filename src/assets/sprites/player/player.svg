@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Player character -->
+  <g id="player">
+    <!-- Body -->
+    <circle cx="16" cy="16" r="12" fill="#3F51B5" />
+    
+    <!-- Eyes -->
+    <circle cx="11" cy="13" r="3" fill="white" />
+    <circle cx="21" cy="13" r="3" fill="white" />
+    <circle cx="11" cy="13" r="1.5" fill="black" />
+    <circle cx="21" cy="13" r="1.5" fill="black" />
+    
+    <!-- Mouth -->
+    <path d="M10,20 Q16,26 22,20" stroke="white" stroke-width="2" fill="none" />
+  </g>
+  
+  <!-- Animation frames -->
+  <g id="walk" display="none">
+    <animate
+      attributeName="display"
+      values="inline;none;none;none"
+      dur="0.4s"
+      repeatCount="indefinite" />
+    <circle cx="16" cy="15" r="12" fill="#3F51B5" />
+  </g>
+  
+  <g id="walk2" display="none">
+    <animate
+      attributeName="display"
+      values="none;inline;none;none"
+      dur="0.4s"
+      repeatCount="indefinite" />
+    <circle cx="16" cy="17" r="12" fill="#3F51B5" />
+  </g>
+  
+  <g id="walk3" display="none">
+    <animate
+      attributeName="display"
+      values="none;none;inline;none"
+      dur="0.4s"
+      repeatCount="indefinite" />
+    <circle cx="16" cy="15" r="12" fill="#3F51B5" />
+  </g>
+  
+  <g id="walk4" display="none">
+    <animate
+      attributeName="display"
+      values="none;none;none;inline"
+      dur="0.4s"
+      repeatCount="indefinite" />
+    <circle cx="16" cy="17" r="12" fill="#3F51B5" />
+  </g>
+</svg>
